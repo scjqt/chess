@@ -9,6 +9,9 @@ pub struct UIMaterials {
     normal: Handle<ColorMaterial>,
     hovered: Handle<ColorMaterial>,
     greyed: Handle<ColorMaterial>,
+    restart: Handle<ColorMaterial>,
+    undo: Handle<ColorMaterial>,
+    redo: Handle<ColorMaterial>,
 }
 
 #[derive(PartialEq, Eq)]
@@ -21,13 +24,16 @@ pub enum ButtonType {
 pub fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    font: Res<FontAsset>,
+    asset_server: Res<AssetServer>,
 ) {
     let ui_materials = UIMaterials {
         background: materials.add(Color::rgba(0.1, 0.1, 0.1, 0.7).into()),
         normal: materials.add(Color::rgba(0.4, 0.4, 0.4, 1.0).into()),
         hovered: materials.add(Color::rgba(0.6, 0.6, 0.6, 1.0).into()),
         greyed: materials.add(Color::rgba(0.21, 0.2, 0.19, 1.0).into()),
+        restart: materials.add(asset_server.load("textures/buttons/restart.png").into()),
+        undo: materials.add(asset_server.load("textures/buttons/undo.png").into()),
+        redo: materials.add(asset_server.load("textures/buttons/redo.png").into()),
     };
 
     commands.spawn_bundle(NodeBundle {
@@ -45,14 +51,9 @@ pub fn setup(
         material: materials.add(Color::NONE.into()),
         ..Default::default()
     }).with_children(|parent| {
-        let style = TextStyle {
-            font: font.0.clone(),
-            font_size: 30.0,
-            color: Color::rgba(1.0, 1.0, 1.0, 0.7),
-        };
-        button(parent, &ui_materials, SQUARE_SIZE * 0.0, style.clone(), "Restart", ButtonType::Restart);
-        button(parent, &ui_materials, SQUARE_SIZE * 3.5, style.clone(), "Undo", ButtonType::Undo);
-        button(parent, &ui_materials, SQUARE_SIZE * 5.5, style, "Redo", ButtonType::Redo);
+        button(parent, &ui_materials, ui_materials.restart.clone(), SQUARE_SIZE * 0.5, ButtonType::Restart);
+        button(parent, &ui_materials, ui_materials.undo.clone(), SQUARE_SIZE * 3.75, ButtonType::Undo);
+        button(parent, &ui_materials, ui_materials.redo.clone(), SQUARE_SIZE * 5.25, ButtonType::Redo);
     });
 
     commands.insert_resource(ui_materials);
@@ -114,33 +115,31 @@ fn update_button(
 fn button(
     parent: &mut ChildBuilder,
     materials: &UIMaterials,
+    texture: Handle<ColorMaterial>,
     position: f32,
-    style: TextStyle,
-    text: &str,
     button_type: ButtonType,
 ) {
     parent.spawn_bundle(ButtonBundle {
         style: Style {
-            size: Size::new(Val::Px(100.0), Val::Px(40.0)),
+            size: Size::new(Val::Px(60.0), Val::Px(60.0)),
             position_type: PositionType::Absolute,
             position: Rect {
                 left: Val::Px(position),
                 ..Default::default()
             },
             margin: Rect::all(Val::Auto),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
             ..Default::default()
         },
         material: materials.greyed.clone(),
         ..Default::default()
     }).with_children(|parent| {
-        parent.spawn_bundle(TextBundle {
-            text: Text::with_section(
-                text,
-                style, 
-                Default::default()
-            ),
+        parent.spawn_bundle(ImageBundle {
+            style: Style {
+                size: Size::new(Val::Px(60.0), Val::Px(60.0)),
+                margin: Rect::all(Val::Auto),
+                ..Default::default()
+            },
+            material: texture,
             ..Default::default()
         }).insert(FocusPolicy::Pass);
     }).insert(button_type);
