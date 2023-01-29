@@ -1,17 +1,17 @@
 #![windows_subsystem = "windows"]
 
-mod chess;
-mod states;
 mod board;
+mod chess;
 mod highlights;
+mod states;
 mod ui;
 
-use std::collections::{HashMap, HashSet};
 use bevy::{prelude::*, render::pass::ClearColor};
-use chess::{Piece, Position, Colour, Variant, Colour::*, Variant::*, EndState};
-use board::{Textures, PieceEntities, Drag};
-use states::BoardStates;
+use board::{Drag, PieceEntities, Textures};
+use chess::{Colour, Colour::*, EndState, Piece, Position, Variant, Variant::*};
 use highlights::Highlights;
+use states::BoardStates;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -28,57 +28,57 @@ const CENTRE_Y: f32 = 30.0;
 
 fn main() {
     App::build()
-    .insert_resource(WindowDescriptor {
-        title: "Chess".to_string(),
-        resizable: false,
-        width: SCREEN_WIDTH,
-        height: SCREEN_HEIGHT,
-        vsync: false,
-        ..Default::default()
-    })
-    .insert_resource(ClearColor(Color::rgb(0.19, 0.18, 0.17)))
-    .add_plugins(DefaultPlugins)
-    .init_resource::<FontAsset>()
-    .add_state(GameState::Playing)
-    .add_startup_system(setup.system().label("setup"))
-    .add_startup_system(ui::setup.system().after("setup"))
-    .add_startup_system(highlights::setup.system())
-    .add_startup_system(board::setup.system())
-    .add_system_set(
-        SystemSet::on_update(GameState::Playing)
-        .with_system(ui::update_greyed.system().before("buttons"))
-        .with_system(ui::update_buttons.system().label("buttons").before("update"))
-        .with_system(update.system().label("update"))
-        .with_system(highlights::update.system().after("update"))
-        .with_system(board::update.system().label("pieces").after("update"))
-        .with_system(board::update_drag.system().after("pieces"))
-    )
-    .add_system_set(
-        SystemSet::on_enter(GameState::Promoting)
-        .with_system(ui::setup_promotion.system())
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::Promoting)
-        .with_system(ui::update_promotion.system())
-    )
-    .add_system_set(
-        SystemSet::on_exit(GameState::Promoting)
-        .with_system(ui::destruct_promotion.system())
-        .with_system(board::update.system())
-    )
-    .add_system_set(
-        SystemSet::on_enter(GameState::End)
-        .with_system(ui::setup_end_screen.system())
-    )
-    .add_system_set(
-        SystemSet::on_update(GameState::End)
-        .with_system(ui::update_end_screen.system())
-    )
-    .add_system_set(
-        SystemSet::on_exit(GameState::End)
-        .with_system(ui::destruct_end_screen.system())
-    )
-    .run();
+        .insert_resource(WindowDescriptor {
+            title: "Chess".to_string(),
+            resizable: false,
+            width: SCREEN_WIDTH,
+            height: SCREEN_HEIGHT,
+            vsync: false,
+            ..Default::default()
+        })
+        .insert_resource(ClearColor(Color::rgb(0.19, 0.18, 0.17)))
+        .add_plugins(DefaultPlugins)
+        .init_resource::<FontAsset>()
+        .add_state(GameState::Playing)
+        .add_startup_system(setup.system().label("setup"))
+        .add_startup_system(ui::setup.system().after("setup"))
+        .add_startup_system(highlights::setup.system())
+        .add_startup_system(board::setup.system())
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing)
+                .with_system(ui::update_greyed.system().before("buttons"))
+                .with_system(
+                    ui::update_buttons
+                        .system()
+                        .label("buttons")
+                        .before("update"),
+                )
+                .with_system(update.system().label("update"))
+                .with_system(highlights::update.system().after("update"))
+                .with_system(board::update.system().label("pieces").after("update"))
+                .with_system(board::update_drag.system().after("pieces")),
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::Promoting).with_system(ui::setup_promotion.system()),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Promoting).with_system(ui::update_promotion.system()),
+        )
+        .add_system_set(
+            SystemSet::on_exit(GameState::Promoting)
+                .with_system(ui::destruct_promotion.system())
+                .with_system(board::update.system()),
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::End).with_system(ui::setup_end_screen.system()),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::End).with_system(ui::update_end_screen.system()),
+        )
+        .add_system_set(
+            SystemSet::on_exit(GameState::End).with_system(ui::destruct_end_screen.system()),
+        )
+        .run();
 }
 
 pub struct Selected(Option<Position>);
@@ -92,9 +92,7 @@ impl FromWorld for FontAsset {
     }
 }
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(UiCameraBundle::default());
 
@@ -114,7 +112,11 @@ fn update(
     mouse_input: Res<Input<MouseButton>>,
 ) {
     let window = windows.get_primary().unwrap();
-    let mouse_pos = if let Some(pos) = window.cursor_position() { pos - Vec2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0) } else { return };
+    let mouse_pos = if let Some(pos) = window.cursor_position() {
+        pos - Vec2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0)
+    } else {
+        return;
+    };
 
     if mouse_input.just_pressed(MouseButton::Left) {
         if let Some(pos) = to_board_pos(mouse_pos) {
@@ -143,7 +145,14 @@ fn update(
             *drag = Drag::Mouse(mouse_pos);
             let mut new = None;
             if let Some(pos) = to_board_pos(mouse_pos) {
-                if states.active().state.get_piece_moves().get(&s).unwrap().contains(&pos) {
+                if states
+                    .active()
+                    .state
+                    .get_piece_moves()
+                    .get(&s)
+                    .unwrap()
+                    .contains(&pos)
+                {
                     new = Some(pos);
                 }
             }
@@ -203,20 +212,31 @@ fn try_move(
             game_state.set(GameState::Promoting).unwrap();
         } else if states.active().state.ended().is_some() {
             game_state.set(GameState::End).unwrap();
-        } 
+        }
         return true;
     }
     false
 }
 
 fn to_board_pos(pos: Vec2) -> Option<Position> {
-    Position::from_xy(((pos.x - CENTRE_X) / SQUARE_SIZE + 5.0) as i8 - 1, ((pos.y - CENTRE_Y) / SQUARE_SIZE + 5.0) as i8 - 1)
+    Position::from_xy(
+        ((pos.x - CENTRE_X) / SQUARE_SIZE + 5.0) as i8 - 1,
+        ((pos.y - CENTRE_Y) / SQUARE_SIZE + 5.0) as i8 - 1,
+    )
 }
 
 fn from_board_pos(pos: Position, z: f32) -> Transform {
-    Transform::from_xyz((pos.get_x() as f32 - 3.5) * SQUARE_SIZE + CENTRE_X, (pos.get_y() as f32 - 3.5) * SQUARE_SIZE + CENTRE_Y, z)
+    Transform::from_xyz(
+        (pos.get_x() as f32 - 3.5) * SQUARE_SIZE + CENTRE_X,
+        (pos.get_y() as f32 - 3.5) * SQUARE_SIZE + CENTRE_Y,
+        z,
+    )
 }
 
 fn from_xy(x: i8, y: i8, z: f32) -> Transform {
-    Transform::from_xyz((x as f32 - 3.5) * SQUARE_SIZE + CENTRE_X, (y as f32 - 3.5) * SQUARE_SIZE + CENTRE_Y, z)
+    Transform::from_xyz(
+        (x as f32 - 3.5) * SQUARE_SIZE + CENTRE_X,
+        (y as f32 - 3.5) * SQUARE_SIZE + CENTRE_Y,
+        z,
+    )
 }

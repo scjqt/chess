@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use bevy::prelude::*;
 use super::*;
+use bevy::prelude::*;
+use std::collections::HashSet;
 
 pub struct Highlight(Position);
 pub struct Highlights {
@@ -17,7 +17,7 @@ pub struct HighlightTextures {
     in_check: Handle<ColorMaterial>,
 }
 
-pub fn setup (
+pub fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
@@ -41,7 +41,10 @@ pub fn setup (
 
     let temp = SpriteBundle {
         sprite: Sprite::new(Vec2::new(SQUARE_SIZE, SQUARE_SIZE)),
-        visible: Visible { is_visible: true, is_transparent: true },
+        visible: Visible {
+            is_visible: true,
+            is_transparent: true,
+        },
         ..Default::default()
     };
 
@@ -49,12 +52,14 @@ pub fn setup (
         for x in 0..8 {
             let mut sprite = temp.clone();
             sprite.transform = from_xy(x, y, 1.0);
-            commands.spawn_bundle(sprite).insert(Highlight(Position::from_xy(x, y).unwrap()));
+            commands
+                .spawn_bundle(sprite)
+                .insert(Highlight(Position::from_xy(x, y).unwrap()));
         }
     }
 }
 
-pub fn update (
+pub fn update(
     mut highlights: Query<(&Highlight, &mut Handle<ColorMaterial>)>,
     materials: Res<HighlightTextures>,
     states: Res<BoardStates>,
@@ -67,7 +72,8 @@ pub fn update (
     if highlight_state.is_changed() || selected.is_changed() || states.is_changed() {
         highlight_state.selected_piece_moves = HashSet::new();
         if let Some(pos) = selected.0 {
-            highlight_state.selected_piece_moves = states.active().piece_moves.get(&pos).unwrap().clone();
+            highlight_state.selected_piece_moves =
+                states.active().piece_moves.get(&pos).unwrap().clone();
         }
 
         for (Highlight(pos), mut material) in highlights.iter_mut() {

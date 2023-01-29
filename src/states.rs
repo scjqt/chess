@@ -11,7 +11,9 @@ impl BoardState {
         let state = chess::State::new();
         let piece_moves = state.get_piece_moves();
         BoardState {
-            state, piece_moves, last_move: None,
+            state,
+            piece_moves,
+            last_move: None,
         }
     }
 
@@ -21,14 +23,16 @@ impl BoardState {
             state.try_move(from, to);
             let piece_moves = state.get_piece_moves();
             return Some(BoardState {
-                state, piece_moves, last_move: Some((from, to))
+                state,
+                piece_moves,
+                last_move: Some((from, to)),
             });
         }
         None
     }
 
     pub fn promote(&mut self, variant: Variant) -> bool {
-        if self.state.promote(variant) { 
+        if self.state.promote(variant) {
             self.piece_moves = self.state.get_piece_moves();
             return true;
         }

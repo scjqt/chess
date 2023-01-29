@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use MoveType::*;
 use Colour::*;
+use MoveType::*;
 use Variant::*;
 
 #[derive(Clone)]
@@ -31,31 +31,39 @@ impl State {
                 }
                 _ if char::is_numeric(char) => x += char.to_string().parse::<i8>().unwrap(),
                 c => {
-                    pieces.insert(Position::from_xy(x, y).unwrap(), Piece {
-                        colour: if c.is_uppercase() { White } else { Black },
-                        variant: match c.to_lowercase().next().unwrap() {
-                            'p' => Pawn,
-                            'n' => Knight,
-                            'b' => Bishop,
-                            'r' => Rook,
-                            'q' => Queen,
-                            'k' => King,
-                            _ => panic!(),
-                        }
-                    });
+                    pieces.insert(
+                        Position::from_xy(x, y).unwrap(),
+                        Piece {
+                            colour: if c.is_uppercase() { White } else { Black },
+                            variant: match c.to_lowercase().next().unwrap() {
+                                'p' => Pawn,
+                                'n' => Knight,
+                                'b' => Bishop,
+                                'r' => Rook,
+                                'q' => Queen,
+                                'k' => King,
+                                _ => panic!(),
+                            },
+                        },
+                    );
                     x += 1;
                 }
             }
         }
 
-        let turn = if parts.next().unwrap() == "w" { White } else { Black };
+        let turn = if parts.next().unwrap() == "w" {
+            White
+        } else {
+            Black
+        };
 
         let castling = parts.next().unwrap();
         let en_passant = match parts.next().unwrap() {
             "-" => None,
-            x => {
-                Position::from_xy(x.chars().nth(0).unwrap() as i8 - 97, x[1..=1].parse::<i8>().unwrap() - 1)
-            }
+            x => Position::from_xy(
+                x.chars().nth(0).unwrap() as i8 - 97,
+                x[1..=1].parse::<i8>().unwrap() - 1,
+            ),
         };
 
         let info = StateInfo {
@@ -67,7 +75,13 @@ impl State {
             promoting: None,
         };
 
-        let mut state = State { pieces, moves: HashMap::new(), turn, info, ended: None };
+        let mut state = State {
+            pieces,
+            moves: HashMap::new(),
+            turn,
+            info,
+            ended: None,
+        };
         state.gen_legal_moves();
         state
     }
@@ -92,9 +106,30 @@ impl State {
     }
 
     fn gen_capture_moves(&self, colour: Colour) -> Option<HashMap<(Position, Position), MoveInfo>> {
-        const OFFSETS: [(i8, i8); 16] = [(1, 1), (-1, 1), (-1, -1), (1, -1), (1, 0), (0, 1), (-1, 0), (0, -1), 
-        (2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)];
-        const CORNERS: [Position; 4] = [Position { value: 0 }, Position { value: 7 }, Position { value: 56 }, Position { value: 63 }];
+        const OFFSETS: [(i8, i8); 16] = [
+            (1, 1),
+            (-1, 1),
+            (-1, -1),
+            (1, -1),
+            (1, 0),
+            (0, 1),
+            (-1, 0),
+            (0, -1),
+            (2, 1),
+            (1, 2),
+            (-1, 2),
+            (-2, 1),
+            (-2, -1),
+            (-1, -2),
+            (1, -2),
+            (2, -1),
+        ];
+        const CORNERS: [Position; 4] = [
+            Position { value: 0 },
+            Position { value: 7 },
+            Position { value: 56 },
+            Position { value: 63 },
+        ];
 
         let mut moves = HashSet::new();
 
@@ -148,14 +183,17 @@ impl State {
                 }
                 Pawn => {
                     if self.pieces.get(to).is_some() {
-                        if (colour == White && to.get_y() == 7) || (colour == Black && to.get_y() == 0) {
+                        if (colour == White && to.get_y() == 7)
+                            || (colour == Black && to.get_y() == 0)
+                        {
                             info.state_info.promoting = Some(*to);
                         }
                     } else {
-                        info.move_type = EnPassant(Position::from_xy(to.get_x(), from.get_y()).unwrap());
+                        info.move_type =
+                            EnPassant(Position::from_xy(to.get_x(), from.get_y()).unwrap());
                     }
                 }
-                _ => ()
+                _ => (),
             }
 
             if *from == CORNERS[0] || *to == CORNERS[0] {
@@ -185,27 +223,37 @@ impl State {
                         let y = if self.turn == White { 1 } else { -1 };
                         if let Some(to) = from.offset_by(0, y) {
                             if self.pieces.get(&to).is_none() {
-                                self.moves.insert((from, to), if (self.turn == White && to.get_y() == 7) || (self.turn == Black && to.get_y() == 0) {
-                                    MoveInfo {
-                                        state_info: StateInfo {
-                                            promoting: Some(to),
+                                self.moves.insert(
+                                    (from, to),
+                                    if (self.turn == White && to.get_y() == 7)
+                                        || (self.turn == Black && to.get_y() == 0)
+                                    {
+                                        MoveInfo {
+                                            state_info: StateInfo {
+                                                promoting: Some(to),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    }
-                                } else {
-                                    MoveInfo::default()
-                                });
-                                if (self.turn == White && from.get_y() == 1) || (self.turn == Black && from.get_y() == 6) {
+                                        }
+                                    } else {
+                                        MoveInfo::default()
+                                    },
+                                );
+                                if (self.turn == White && from.get_y() == 1)
+                                    || (self.turn == Black && from.get_y() == 6)
+                                {
                                     if let Some(double) = from.offset_by(0, y * 2) {
                                         if self.pieces.get(&double).is_none() {
-                                            self.moves.insert((from, double), MoveInfo {
-                                                state_info: StateInfo {
-                                                    en_passant: Some(to),
+                                            self.moves.insert(
+                                                (from, double),
+                                                MoveInfo {
+                                                    state_info: StateInfo {
+                                                        en_passant: Some(to),
+                                                        ..Default::default()
+                                                    },
                                                     ..Default::default()
                                                 },
-                                                ..Default::default()
-                                            });
+                                            );
                                         }
                                     }
                                 }
@@ -213,8 +261,10 @@ impl State {
                         }
                     }
                     King => {
-                        let short = (self.turn == White && self.info.white_short) || (self.turn == Black && self.info.black_short);
-                        let long = (self.turn == White && self.info.white_long) || (self.turn == Black && self.info.black_long);
+                        let short = (self.turn == White && self.info.white_short)
+                            || (self.turn == Black && self.info.black_short);
+                        let long = (self.turn == White && self.info.white_long)
+                            || (self.turn == Black && self.info.black_long);
                         if short || long {
                             if !self.in_check() {
                                 let castle_info = if self.turn == White {
@@ -238,10 +288,16 @@ impl State {
                                             if !state.in_check() {
                                                 if let Some(to) = from.offset_by(2, 0) {
                                                     if self.pieces.get(&to).is_none() {
-                                                        self.moves.insert((from, to), MoveInfo {
-                                                            move_type: Castle(from.offset_by(3, 0).unwrap(), from.offset_by(1, 0).unwrap()),
-                                                            state_info: castle_info,
-                                                        });
+                                                        self.moves.insert(
+                                                            (from, to),
+                                                            MoveInfo {
+                                                                move_type: Castle(
+                                                                    from.offset_by(3, 0).unwrap(),
+                                                                    from.offset_by(1, 0).unwrap(),
+                                                                ),
+                                                                state_info: castle_info,
+                                                            },
+                                                        );
                                                     }
                                                 }
                                             }
@@ -256,12 +312,23 @@ impl State {
                                             if !state.in_check() {
                                                 if let Some(to) = from.offset_by(-2, 0) {
                                                     if self.pieces.get(&to).is_none() {
-                                                        if let Some(between2) = from.offset_by(-3, 0) {
-                                                            if self.pieces.get(&between2).is_none() {
-                                                                self.moves.insert((from, to), MoveInfo {
-                                                                    move_type: Castle(from.offset_by(-4, 0).unwrap(), from.offset_by(-1, 0).unwrap()),
-                                                                    state_info: castle_info,
-                                                                });
+                                                        if let Some(between2) =
+                                                            from.offset_by(-3, 0)
+                                                        {
+                                                            if self.pieces.get(&between2).is_none()
+                                                            {
+                                                                self.moves.insert(
+                                                                    (from, to),
+                                                                    MoveInfo {
+                                                                        move_type: Castle(
+                                                                            from.offset_by(-4, 0)
+                                                                                .unwrap(),
+                                                                            from.offset_by(-1, 0)
+                                                                                .unwrap(),
+                                                                        ),
+                                                                        state_info: castle_info,
+                                                                    },
+                                                                );
                                                             }
                                                         }
                                                     }
@@ -273,7 +340,7 @@ impl State {
                             }
                         }
                     }
-                    _ => ()
+                    _ => (),
                 }
             }
         }
@@ -288,7 +355,13 @@ impl State {
         });
     }
 
-    fn sliding_moves(&self, moves: &mut HashSet<(Position, Position)>, from: Position, colour: Colour, offsets: &[(i8, i8)]) {
+    fn sliding_moves(
+        &self,
+        moves: &mut HashSet<(Position, Position)>,
+        from: Position,
+        colour: Colour,
+        offsets: &[(i8, i8)],
+    ) {
         for offset in offsets {
             let mut i = 1;
             while let Some(to) = from.offset_by(offset.0 * i, offset.1 * i) {
@@ -305,7 +378,13 @@ impl State {
         }
     }
 
-    fn non_sliding_moves(&self, moves: &mut HashSet<(Position, Position)>, from: Position, colour: Colour, offsets: &[(i8, i8)]) {
+    fn non_sliding_moves(
+        &self,
+        moves: &mut HashSet<(Position, Position)>,
+        from: Position,
+        colour: Colour,
+        offsets: &[(i8, i8)],
+    ) {
         for offset in offsets {
             if let Some(to) = from.offset_by(offset.0, offset.1) {
                 if let Some(piece) = self.pieces.get(&to) {
@@ -319,7 +398,14 @@ impl State {
         }
     }
 
-    fn pawn_capture(&self, moves: &mut HashSet<(Position, Position)>, from: Position, colour: Colour, x: i8, y: i8) {
+    fn pawn_capture(
+        &self,
+        moves: &mut HashSet<(Position, Position)>,
+        from: Position,
+        colour: Colour,
+        x: i8,
+        y: i8,
+    ) {
         if let Some(to) = from.offset_by(x, y) {
             if let Some(piece) = self.pieces.get(&to) {
                 if piece.colour != colour {
@@ -361,7 +447,9 @@ impl State {
         self.info.apply(info.state_info);
         match info.move_type {
             Castle(f, t) => self.move_piece(f, t),
-            EnPassant(p) => { self.pieces.remove(&p); },
+            EnPassant(p) => {
+                self.pieces.remove(&p);
+            }
             Normal => (),
         }
     }
@@ -374,14 +462,20 @@ impl State {
     pub fn promote(&mut self, variant: Variant) -> bool {
         if let Some(pos) = self.info.promoting {
             match variant {
-                Knight | Bishop | Rook | Queen => { 
-                    self.pieces.insert(pos, Piece { colour: self.turn, variant });
+                Knight | Bishop | Rook | Queen => {
+                    self.pieces.insert(
+                        pos,
+                        Piece {
+                            colour: self.turn,
+                            variant,
+                        },
+                    );
                     self.turn.flip();
                     self.gen_legal_moves();
                     self.info.promoting = None;
                     return true;
                 }
-                _ => ()
+                _ => (),
             }
         }
         false
@@ -395,12 +489,13 @@ impl State {
                 Pawn => return true,
                 Rook => return true,
                 Queen => return true,
-                Knight | Bishop => 
+                Knight | Bishop => {
                     if piece.colour == White {
                         minors_white += 1;
                     } else {
                         minors_black += 1;
-                    },
+                    }
+                }
                 _ => (),
             }
         }
@@ -522,7 +617,9 @@ pub struct Position {
 impl Position {
     pub fn from_xy(x: i8, y: i8) -> Option<Position> {
         if x >= 0 && y >= 0 && x < 8 && y < 8 {
-            return Some(Position { value: ((y as u8) << 3) | (x as u8) });
+            return Some(Position {
+                value: ((y as u8) << 3) | (x as u8),
+            });
         }
         None
     }
@@ -558,7 +655,11 @@ impl Colour {
     }
 
     fn flipped(&self) -> Colour {
-        if self == &White { Black } else { White }
+        if self == &White {
+            Black
+        } else {
+            White
+        }
     }
 }
 
@@ -575,12 +676,12 @@ pub enum Variant {
 impl PartialEq for State {
     fn eq(&self, other: &State) -> bool {
         self.pieces == other.pieces
-        && self.turn == other.turn
-        && self.info.white_short == other.info.white_short
-        && self.info.white_long == other.info.white_long
-        && self.info.black_short == other.info.black_short
-        && self.info.black_long == other.info.black_long
-        && self.info.en_passant == other.info.en_passant
+            && self.turn == other.turn
+            && self.info.white_short == other.info.white_short
+            && self.info.white_long == other.info.white_long
+            && self.info.black_short == other.info.black_short
+            && self.info.black_long == other.info.black_long
+            && self.info.en_passant == other.info.en_passant
     }
 }
-impl Eq for State { }
+impl Eq for State {}
